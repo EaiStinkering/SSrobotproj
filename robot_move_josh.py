@@ -26,7 +26,7 @@ MOTOR_SPEED = 10  # Speed value (-100 to 100)
 # This depends on the motor encoder PCB - adjust based on your encoder specs
 # Typical: 1 PPR (pulse per rotation) = 1 count per motor rotation
 # If your encoder gives N counts per rotation, use that value
-COUNTS_PER_ROTATION = 1  # Adjust this based on your encoder specifications
+COUNTS_PER_ROTATION = 360  # Adjust this based on your encoder specifications
 
 # Timeout and safety
 MOVEMENT_TIMEOUT = 10  # seconds - max time for movement
