@@ -7,10 +7,12 @@ import os
 import threading
 from sparkybotmini import SparkyBotMini
 
-# Handle keyboard input
+# Handle keyboard input for non-blocking key detection
 try:
     import termios
     import tty
+    import select
+    
     def get_key():
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -25,6 +27,11 @@ try:
             return ch.lower()
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    
+    def check_key_available():
+        rlist, _, _ = select.select([sys.stdin], [], [], 0)
+        return bool(rlist)
+    
 except ImportError:
     # Fallback for Windows
     import msvcrt
@@ -37,6 +44,9 @@ except ImportError:
             elif arrow_key == b'M':
                 return 'right'
         return key.decode('utf-8').lower()
+    
+    def check_key_available():
+        return msvcrt.kbhit()
 
 # Initialize robot connection
 robot = SparkyBotMini(port="/dev/ttyUSB0", baudrate=115200, debug=False)
@@ -117,13 +127,13 @@ def update_motor_speed():
 print("Robot movement control")
 print("-" * 40)
 print("MOVEMENT:")
-print("  W - Forward")
-print("  S - Backward")
-print("  A - Strafe Left")
-print("  D - Strafe Right")
+print("  W - Forward (hold)")
+print("  S - Backward (hold)")
+print("  A - Strafe Left (hold)")
+print("  D - Strafe Right (hold)")
 print("TURNING:")
-print("  LEFT ARROW  - Turn Left (counterclockwise)")
-print("  RIGHT ARROW - Turn Right (clockwise)")
+print("  LEFT ARROW  - Turn Left (hold)")
+print("  RIGHT ARROW - Turn Right (hold)")
 print("  Q - Quit")
 print("-" * 40)
 
@@ -131,39 +141,37 @@ print("-" * 40)
 motor_thread = threading.Thread(target=update_motor_speed, daemon=True)
 motor_thread.start()
 
+def map_key(key):
+    """Map arrow key codes to consistent names"""
+    if key == 'D':  # LEFT ARROW on Linux
+        return 'left'
+    elif key == 'C':  # RIGHT ARROW on Linux
+        return 'right'
+    return key
+
 try:
     while True:
-        key = get_key()
-        
-        if key == 'w':
-            keys_pressed['w'] = not keys_pressed['w']
-            print(f"W: {'ON' if keys_pressed['w'] else 'OFF'}")
-        elif key == 's':
-            keys_pressed['s'] = not keys_pressed['s']
-            print(f"S: {'ON' if keys_pressed['s'] else 'OFF'}")
-        elif key == 'a':
-            keys_pressed['a'] = not keys_pressed['a']
-            print(f"A: {'ON' if keys_pressed['a'] else 'OFF'}")
-        elif key == 'd':
-            keys_pressed['d'] = not keys_pressed['d']
-            print(f"D: {'ON' if keys_pressed['d'] else 'OFF'}")
-        elif key == 'D':  # LEFT ARROW on Linux (code 'D')
-            keys_pressed['left'] = not keys_pressed['left']
-            print(f"LEFT: {'ON' if keys_pressed['left'] else 'OFF'}")
-        elif key == 'C':  # RIGHT ARROW on Linux (code 'C')
-            keys_pressed['right'] = not keys_pressed['right']
-            print(f"RIGHT: {'ON' if keys_pressed['right'] else 'OFF'}")
-        elif key == 'left':  # Windows left arrow
-            keys_pressed['left'] = not keys_pressed['left']
-            print(f"LEFT: {'ON' if keys_pressed['left'] else 'OFF'}")
-        elif key == 'right':  # Windows right arrow
-            keys_pressed['right'] = not keys_pressed['right']
-            print(f"RIGHT: {'ON' if keys_pressed['right'] else 'OFF'}")
-        elif key == 'q':
-            print("Stopping robot and exiting...")
-            running = False
-            robot.set_motor(0, 0, 0, 0)
-            break
+        # Check if a key is available
+        if check_key_available():
+            key = get_key()
+            key = map_key(key)
+            
+            if key == 'q':
+                print("Stopping robot and exiting...")
+                running = False
+                robot.set_motor(0, 0, 0, 0)
+                break
+            elif key in keys_pressed:
+                # Key pressed - set to True
+                if not keys_pressed[key]:
+                    keys_pressed[key] = True
+                    print(f"{key.upper()}: ON")
+        else:
+            # No key available - all keys are released
+            for key in keys_pressed:
+                if keys_pressed[key]:
+                    keys_pressed[key] = False
+                    print(f"{key.upper()}: OFF")
         
         time.sleep(0.01)
 
