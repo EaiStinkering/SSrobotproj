@@ -60,10 +60,10 @@ def calculate_encoder_target():
     print(f"📊 Target encoder counts: {target_counts}")
     return target_counts
 
-def get_average_distance(encoders):
-    """Calculate average distance traveled (in wheel rotations)"""
-    # Average the 4 motor encoders
-    avg_encoder = sum(encoders) / 4
+def get_average_distance(encoder_deltas):
+    """Calculate average distance traveled from encoder deltas"""
+    # Average the 4 motor encoder deltas
+    avg_encoder = sum(encoder_deltas) / 4
     distance_rotations = avg_encoder / COUNTS_PER_ROTATION
     distance_mm = distance_rotations * WHEEL_CIRCUMFERENCE_MM
     return distance_mm, avg_encoder
@@ -136,8 +136,11 @@ def move_forward_1_meter():
             # Read current encoder values
             current_encoders = robot.get_encoders()
             
+            # Calculate delta from initial position (the fix!)
+            encoder_deltas = [current_encoders[i] - initial_encoders[i] for i in range(4)]
+            
             # Calculate distance traveled
-            distance_mm, avg_counts = get_average_distance(current_encoders)
+            distance_mm, avg_counts = get_average_distance(encoder_deltas)
             
             # Print progress every 0.5 seconds
             if time.time() - last_print_time >= 0.5:
