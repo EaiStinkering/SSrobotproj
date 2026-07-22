@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SparkyBotMini omnidirectional movement with WASD keyboard controls"""
+"""SparkyBotMini omnidirectional movement with WASD keyboard controls and arrow key turning"""
 
 import time
 import sys
@@ -16,6 +16,11 @@ try:
         try:
             tty.setraw(sys.stdin.fileno())
             ch = sys.stdin.read(1)
+            # Handle arrow keys
+            if ch == '\x1b':  # Escape sequence
+                sys.stdin.read(1)  # Read '['
+                arrow_key = sys.stdin.read(1)
+                return arrow_key
             return ch.lower()
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
@@ -23,20 +28,33 @@ except ImportError:
     # Fallback for Windows
     import msvcrt
     def get_key():
-        return msvcrt.getch().decode('utf-8').lower()
+        key = msvcrt.getch()
+        if key == b'\xe0':  # Arrow key prefix on Windows
+            arrow_key = msvcrt.getch()
+            if arrow_key == b'K':
+                return 'left'
+            elif arrow_key == b'M':
+                return 'right'
+        return key.decode('utf-8').lower()
 
 # Initialize robot connection
 robot = SparkyBotMini(port="/dev/ttyUSB0", baudrate=115200, debug=False)
 robot.connect()
 
 motor_speed = 50  # Speed percentage (0-100)
+turn_speed = 50   # Turn speed percentage (0-100)
 
-print("Robot movement control - WASD keys")
-print("W - Forward")
-print("S - Backward")
-print("A - Left")
-print("D - Right")
-print("Q - Quit")
+print("Robot movement control")
+print("-" * 40)
+print("MOVEMENT:")
+print("  W - Forward")
+print("  S - Backward")
+print("  A - Strafe Left")
+print("  D - Strafe Right")
+print("TURNING:")
+print("  LEFT ARROW  - Turn Left (counterclockwise)")
+print("  RIGHT ARROW - Turn Right (clockwise)")
+print("  Q - Quit")
 print("-" * 40)
 
 try:
@@ -64,6 +82,26 @@ try:
             # Front-right and rear-left forward, front-left and rear-right backward
             print("Moving RIGHT")
             robot.set_motor(motor_speed, -motor_speed, -motor_speed, motor_speed)
+        
+        elif key == 'D':  # LEFT ARROW on Linux (code 'D')
+            # Turn left: counterclockwise rotation
+            # Left side motors backward, right side motors forward
+            print("Turning LEFT (counterclockwise)")
+            robot.set_motor(-turn_speed, -turn_speed, turn_speed, turn_speed)
+        
+        elif key == 'C':  # RIGHT ARROW on Linux (code 'C')
+            # Turn right: clockwise rotation
+            # Left side motors forward, right side motors backward
+            print("Turning RIGHT (clockwise)")
+            robot.set_motor(turn_speed, turn_speed, -turn_speed, -turn_speed)
+        
+        elif key == 'left':  # Windows left arrow
+            print("Turning LEFT (counterclockwise)")
+            robot.set_motor(-turn_speed, -turn_speed, turn_speed, turn_speed)
+        
+        elif key == 'right':  # Windows right arrow
+            print("Turning RIGHT (clockwise)")
+            robot.set_motor(turn_speed, turn_speed, -turn_speed, -turn_speed)
         
         elif key == 'q':
             print("Stopping robot and exiting...")
