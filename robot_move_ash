@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SparkyBotMini omnidirectional movement with WASD keyboard controls and arrow key turning"""
-
+#cool movement thingy
 import time
 import sys
 import os
