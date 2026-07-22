@@ -1,1 +1,100 @@
+#!/usr/bin/env python3
+# coding: utf-8
+"""
+SparkyBotMini Omni-Wheel Robot Forward Movement Control
+Robot Configuration:
+- 4x 12V DC motors @ 550 RPM max
+- Omni wheels (60mm diameter) in X-pattern (diamond)
+- Motor mapping: m1=FL, m3=FR, m2=BL, m4=BR
+- Raspberry Pi 5 + Motor Controller
+"""
 
+import sys
+import time
+from sparkybotmini import SparkyBotMini
+
+def drive_forward(robot: SparkyBotMini, speed: int = 50, duration: float = 5.0):
+    """
+    Drive robot forward for a specified duration
+    
+    Args:
+        robot: SparkyBotMini instance
+        speed: Motor speed (0-100), default 50%
+        duration: How long to drive forward in seconds
+    """
+    if not 0 <= speed <= 100:
+        print("? Speed must be between 0-100")
+        return False
+    
+    print(f"? Driving forward at {speed}% speed for {duration}s")
+    print(f"? Motor speeds: m1={speed}, m2={speed}, m3={speed}, m4={speed}")
+    
+    # All motors spin forward at same speed
+    robot.set_motor(speed, speed, speed, speed)
+    
+    # Drive for specified duration
+    time.sleep(duration)
+    
+    # Stop
+    print("? Stopping motors...")
+    robot.set_motor(0, 0, 0, 0)
+    
+    return True
+
+def main():
+    """Main entry point"""
+    # Create robot instance for Raspberry Pi 5
+    robot = SparkyBotMini(port="/dev/ttyUSB0", baudrate=115200, debug=False)
+    
+    try:
+        # Connect to robot
+        print("? Connecting to SparkyBotMini...")
+        if not robot.connect():
+            print("? Failed to connect to robot!")
+            return False
+        
+        time.sleep(0.5)
+        
+        # Get firmware version
+        version = robot.get_version(timeout=0.5)
+        if version > 0:
+            print(f"? Firmware version: v{version}")
+        
+        # Enable auto-reporting for sensor data
+        robot.set_auto_report(True)
+        time.sleep(0.5)
+        
+        # Get initial battery voltage
+        voltage = robot.get_battery_voltage()
+        print(f"? Battery voltage: {voltage:.1f}V")
+        
+        # Drive forward
+        if not drive_forward(robot, speed=50, duration=3.0):
+            return False
+        
+        print("\n? Movement test completed successfully!")
+        return True
+        
+    except KeyboardInterrupt:
+        print("\n\n? Interrupted by user")
+        robot.set_motor(0, 0, 0, 0)
+        return False
+    
+    except Exception as e:
+        print(f"? Error: {e}")
+        return False
+    
+    finally:
+        # Ensure motors are stopped
+        try:
+            robot.set_motor(0, 0, 0, 0)
+        except:
+            pass
+        
+        # Disconnect
+        robot.disconnect()
+        print("? Disconnected from robot")
+
+if __name__ == "__main__":
+    success = main()
+    sys.exit(0 if success else 1)
