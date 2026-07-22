@@ -20,7 +20,7 @@ WHEEL_CIRCUMFERENCE_MM = WHEEL_DIAMETER_MM * 3.14159  # π * d
 TARGET_DISTANCE_MM = 1000  # 1 meter
 
 # Motor speed calibration
-MOTOR_SPEED = 50  # Speed value (-100 to 100)
+MOTOR_SPEED = 10  # Speed value (-100 to 100)
 
 # Encoder counts per wheel rotation
 # This depends on the motor encoder PCB - adjust based on your encoder specs
