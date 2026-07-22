@@ -29,7 +29,7 @@ MOTOR_SPEED = 10  # Speed value (-100 to 100)
 COUNTS_PER_ROTATION = 360  # Adjust this based on your encoder specifications
 
 # Timeout and safety
-MOVEMENT_TIMEOUT = 10  # seconds - max time for movement
+MOVEMENT_TIMEOUT = 120  # seconds - max time for movement (increased from 10s)
 ENCODER_READ_TIMEOUT = 0.05  # seconds
 
 # Global E-stop flag
@@ -136,7 +136,7 @@ def move_forward_1_meter():
             # Read current encoder values
             current_encoders = robot.get_encoders()
             
-            # Calculate delta from initial position (the fix!)
+            # Calculate delta from initial position
             encoder_deltas = [current_encoders[i] - initial_encoders[i] for i in range(4)]
             
             # Calculate distance traveled
