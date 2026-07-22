@@ -36,7 +36,7 @@ print("Moving forward at 50% speed for 5 seconds...")
 # For FORWARD movement with mecanum wheels:
 # All motors spin in the SAME direction at the SAME speed
 # Motor speed range: -100 (full reverse) to +100 (full forward)
-robot.set_motor(50, 50, 50, 50)  # 50% forward
+robot.set_motor(10, 10, 10, 10)  # 50% forward
 
 # Move for 5 seconds
 time.sleep(5)
