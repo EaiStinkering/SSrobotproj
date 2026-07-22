@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""SparkyBotMini omnidirectional movement with WASD keyboard controls"""
+
+import time
+import sys
+import os
+from sparkybotmini import SparkyBotMini
+
+# Handle keyboard input
+try:
+    import termios
+    import tty
+    def get_key():
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+            return ch.lower()
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+except ImportError:
+    # Fallback for Windows
+    import msvcrt
+    def get_key():
+        return msvcrt.getch().decode('utf-8').lower()
+
+# Initialize robot connection
+robot = SparkyBotMini(port="/dev/ttyUSB0", baudrate=115200, debug=False)
+robot.connect()
+
+motor_speed = 50  # Speed percentage (0-100)
+
+print("Robot movement control - WASD keys")
+print("W - Forward")
+print("S - Backward")
+print("A - Left")
+print("D - Right")
+print("Q - Quit")
+print("-" * 40)
+
+try:
+    while True:
+        key = get_key()
+        
+        if key == 'w':
+            # Forward: all motors forward
+            print("Moving FORWARD")
+            robot.set_motor(motor_speed, motor_speed, motor_speed, motor_speed)
+        
+        elif key == 's':
+            # Backward: all motors backward
+            print("Moving BACKWARD")
+            robot.set_motor(-motor_speed, -motor_speed, -motor_speed, -motor_speed)
+        
+        elif key == 'a':
+            # Left: omni wheels strafe left
+            # Front-left and rear-right forward, front-right and rear-left backward
+            print("Moving LEFT")
+            robot.set_motor(-motor_speed, motor_speed, motor_speed, -motor_speed)
+        
+        elif key == 'd':
+            # Right: omni wheels strafe right
+            # Front-right and rear-left forward, front-left and rear-right backward
+            print("Moving RIGHT")
+            robot.set_motor(motor_speed, -motor_speed, -motor_speed, motor_speed)
+        
+        elif key == 'q':
+            print("Stopping robot and exiting...")
+            robot.set_motor(0, 0, 0, 0)
+            break
+        
+        else:
+            # Stop on unknown key
+            robot.set_motor(0, 0, 0, 0)
+
+except KeyboardInterrupt:
+    print("\nStopping robot...")
+    robot.set_motor(0, 0, 0, 0)
+
+finally:
+    # Ensure motors are stopped and robot is disconnected
+    robot.set_motor(0, 0, 0, 0)
+    robot.disconnect()
+    print("Robot disconnected")
