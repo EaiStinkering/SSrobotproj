@@ -17,7 +17,7 @@ from sparkybotmini import SparkyBotMini
 # ===== Configuration =====
 WHEEL_DIAMETER_MM = 60  # 60mm omni-wheels
 WHEEL_CIRCUMFERENCE_MM = WHEEL_DIAMETER_MM * 3.14159  # π * d
-TARGET_DISTANCE_MM = 1000  # 1 meter
+TARGET_DISTANCE_MM = 3000
 
 # Motor speed calibration
 MOTOR_SPEED = 10  # Speed value (-100 to 100)
