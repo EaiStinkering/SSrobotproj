@@ -70,58 +70,58 @@ running = True
 def update_motor_speed():
     """Calculate and apply motor speeds based on currently pressed keys"""
     while running:
-        # Base motor speeds (front-left, front-right, rear-left, rear-right)
-        fl = 0
-        fr = 0
-        rl = 0
-        rr = 0
+        # Base motor speeds (m1=top-left, m2=back-left, m3=top-right, m4=back-right)
+        m1 = 0
+        m2 = 0
+        m3 = 0
+        m4 = 0
         
         # Handle movement (WASD)
         if keys_pressed['w']:
             # Forward: all motors forward
-            fl += motor_speed
-            fr += motor_speed
-            rl += motor_speed
-            rr += motor_speed
+            m1 += motor_speed
+            m2 += motor_speed
+            m3 += motor_speed
+            m4 += motor_speed
         
         if keys_pressed['s']:
             # Backward: all motors backward
-            fl -= motor_speed
-            fr -= motor_speed
-            rl -= motor_speed
-            rr -= motor_speed
+            m1 -= motor_speed
+            m2 -= motor_speed
+            m3 -= motor_speed
+            m4 -= motor_speed
         
         if keys_pressed['a']:
-            # Left strafe: front-left and rear-right backward, front-right and rear-left forward
-            fl -= motor_speed
-            fr += motor_speed
-            rl += motor_speed
-            rr -= motor_speed
+            # Left strafe: top-left and back-right backward, top-right and back-left forward
+            m1 -= motor_speed
+            m2 += motor_speed
+            m3 += motor_speed
+            m4 -= motor_speed
         
         if keys_pressed['d']:
-            # Right strafe: front-left and rear-right forward, front-right and rear-left backward
-            fl += motor_speed
-            fr -= motor_speed
-            rl -= motor_speed
-            rr += motor_speed
+            # Right strafe: top-left and back-right forward, top-right and back-left backward
+            m1 += motor_speed
+            m2 -= motor_speed
+            m3 -= motor_speed
+            m4 += motor_speed
         
         # Handle turning (arrow keys)
         if keys_pressed['left']:
             # Turn left: counterclockwise rotation
-            fl -= turn_speed
-            fr += turn_speed
-            rl -= turn_speed
-            rr += turn_speed
+            m1 -= turn_speed
+            m2 -= turn_speed
+            m3 += turn_speed
+            m4 += turn_speed
         
         if keys_pressed['right']:
             # Turn right: clockwise rotation
-            fl += turn_speed
-            fr -= turn_speed
-            rl += turn_speed
-            rr -= turn_speed
+            m1 += turn_speed
+            m2 += turn_speed
+            m3 -= turn_speed
+            m4 -= turn_speed
         
-        # Apply motor speeds
-        robot.set_motor(fl, fr, rl, rr)
+        # Apply motor speeds (m1, m2, m3, m4)
+        robot.set_motor(m1, m2, m3, m4)
         time.sleep(0.05)  # Update at ~20Hz
 
 print("Robot movement control")
@@ -162,12 +162,12 @@ try:
                 robot.set_motor(0, 0, 0, 0)
                 break
             elif key in keys_pressed:
-                # Key pressed - set to True
+                # Key pressed - set to True only if not already pressed
                 if not keys_pressed[key]:
                     keys_pressed[key] = True
                     print(f"{key.upper()}: ON")
         else:
-            # No key available - all keys are released
+            # No key available - release all keys
             for key in keys_pressed:
                 if keys_pressed[key]:
                     keys_pressed[key] = False
