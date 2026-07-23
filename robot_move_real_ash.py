@@ -1,4 +1,6 @@
-move = ""  
+move = ""
+motor_speed = 10
+turn_speed = 10
 def robo_movement (movement)
   move = movement
   if move == "forward":
@@ -67,13 +69,15 @@ def robo_movement (movement)
     m2 += turn_speed
     m3 -= turn_speed
     m4 -= turn_speed
+
+  if move == "stop"
+    m1 = 0
+    m2 = 0
+    m3 = 0
+    m4 = 0
   
 
 robot.set_motor(m1, m2, m3, m4)
-m1 = 0
-m2 = 0
-m3 = 0
-m4 = 0
 while true:
   moving_direction = input("direction?" ).lower()
   print("forward, backward, left, right, top_left, bottom_right, bottom_left, top_right, turn_left, turn_right")
