@@ -25,6 +25,13 @@ target_bgr_upper = np.array([BLUE_UPPER, GREEN_UPPER, RED_UPPER])
 # ===== TARGET LABEL =====
 TARGET_LABEL = "corn"
 
+# ===== FRAMERATE CONFIGURATION =====
+# Set desired framerate in FPS (frames per second)
+# Calculation: delay_ms = 1000 / FPS
+# Examples: 5 FPS = 200ms, 10 FPS = 100ms, 30 FPS = 33ms
+TARGET_FPS = 5
+FRAME_DELAY_MS = int(1000 / TARGET_FPS)
+
 # 1. Initialize the webcam (0 is usually the default built-in camera)
 cap = cv2.VideoCapture(0)
 
@@ -67,6 +74,7 @@ print("Controls:")
 print("  'q' - Quit")
 print(f"Detecting: {TARGET_LABEL}")
 print(f"Color Range (BGR): R({RED_LOWER}-{RED_UPPER}), G({GREEN_LOWER}-{GREEN_UPPER}), B({BLUE_LOWER}-{BLUE_UPPER})")
+print(f"Framerate: {TARGET_FPS} FPS ({FRAME_DELAY_MS}ms delay)")
 print()
 
 while True:
@@ -95,7 +103,7 @@ while True:
     cv2.imshow('Target Mask', mask)
 
     # 4. Handle key presses
-    key = cv2.waitKey(1) & 0xFF
+    key = cv2.waitKey(FRAME_DELAY_MS) & 0xFF
     if key == ord('q'):
         break
 
