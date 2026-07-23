@@ -86,6 +86,10 @@ def robo_movement(movement):
         m3 = 0
         m4 = 0
 
+    #beep
+    if move == "b":
+        robot.beep()
+
     robot.set_motor(m1, m2, m3, m4)
 
 while True:
