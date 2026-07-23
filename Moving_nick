@@ -1,1 +1,130 @@
+#!/usr/bin/env python3
+# coding: utf-8
+"""
+Mecanum Wheel Movement Test
+Tests all 10 possible movement directions for a mecanum wheel robot
+Wheel configuration (X pattern from above):
+  - m1: Front Left
+  - m2: Back Left
+  - m3: Front Right
+  - m4: Back Right
+"""
 
+import time
+import sys
+from sparkybotmini import SparkyBotMini
+
+# Motor speed (0-100)
+MOTOR_SPEED = 20
+DIRECTION_DURATION = 1.0  # seconds per direction
+
+def move_forward(robot, speed):
+    """Move forward - all wheels spin forward"""
+    robot.set_motor(speed, speed, speed, speed)
+
+def move_backward(robot, speed):
+    """Move backward - all wheels spin backward"""
+    robot.set_motor(-speed, -speed, -speed, -speed)
+
+def strafe_left(robot, speed):
+    """Strafe left - front-left & back-right spin opposite to front-right & back-left"""
+    robot.set_motor(-speed, speed, speed, -speed)
+
+def strafe_right(robot, speed):
+    """Strafe right - front-left & back-right spin one way, front-right & back-left opposite"""
+    robot.set_motor(speed, -speed, -speed, speed)
+
+def rotate_clockwise(robot, speed):
+    """Rotate clockwise - front-left & back-left forward, front-right & back-right backward"""
+    robot.set_motor(speed, speed, -speed, -speed)
+
+def rotate_counter_clockwise(robot, speed):
+    """Rotate counter-clockwise - front-left & back-left backward, front-right & back-right forward"""
+    robot.set_motor(-speed, -speed, speed, speed)
+
+def move_diagonal_forward_left(robot, speed):
+    """Move forward and left - left wheels slower/stopped, right wheels forward"""
+    robot.set_motor(0, 0, speed, speed)
+
+def move_diagonal_forward_right(robot, speed):
+    """Move forward and right - right wheels slower/stopped, left wheels forward"""
+    robot.set_motor(speed, speed, 0, 0)
+
+def move_diagonal_backward_left(robot, speed):
+    """Move backward and left - left wheels slower/stopped, right wheels backward"""
+    robot.set_motor(0, 0, -speed, -speed)
+
+def move_diagonal_backward_right(robot, speed):
+    """Move backward and right - right wheels slower/stopped, left wheels backward"""
+    robot.set_motor(-speed, -speed, 0, 0)
+
+def main():
+    """Main test routine"""
+    # Create robot instance
+    robot = SparkyBotMini(port="/dev/ttyUSB0", debug=False)
+    
+    # List of all movement directions
+    movements = [
+        ("Forward", move_forward),
+        ("Backward", move_backward),
+        ("Strafe Left", strafe_left),
+        ("Strafe Right", strafe_right),
+        ("Rotate Clockwise", rotate_clockwise),
+        ("Rotate Counter-Clockwise", rotate_counter_clockwise),
+        ("Diagonal Forward-Left", move_diagonal_forward_left),
+        ("Diagonal Forward-Right", move_diagonal_forward_right),
+        ("Diagonal Backward-Left", move_diagonal_backward_left),
+        ("Diagonal Backward-Right", move_diagonal_backward_right),
+    ]
+    
+    try:
+        # Connect to robot
+        print("🤖 Connecting to SparkyBotMini...")
+        if not robot.connect():
+            print("❌ Failed to connect!")
+            return False
+        
+        print("✅ Connected!\n")
+        time.sleep(0.5)
+        
+        # Enable auto-reporting for sensor feedback
+        robot.set_auto_report(True)
+        time.sleep(0.2)
+        
+        # Test each direction
+        for i, (direction_name, movement_func) in enumerate(movements, 1):
+            print(f"[{i}/10] Testing: {direction_name}")
+            print(f"      Duration: {DIRECTION_DURATION}s at {MOTOR_SPEED}% speed")
+            
+            # Execute movement
+            movement_func(robot, MOTOR_SPEED)
+            time.sleep(DIRECTION_DURATION)
+            
+            # Stop motors
+            robot.set_motor(0, 0, 0, 0)
+            print(f"      ✅ Complete\n")
+            
+            # Small delay between movements
+            time.sleep(0.3)
+        
+        print("=" * 50)
+        print("🎉 All 10 movement directions tested successfully!")
+        print("=" * 50)
+        
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Interrupted by user")
+    
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    finally:
+        # Cleanup - stop all motors
+        print("\n🛑 Stopping motors and disconnecting...")
+        robot.set_motor(0, 0, 0, 0)
+        robot.disconnect()
+        print("👋 Goodbye!")
+
+if __name__ == "__main__":
+    main()
