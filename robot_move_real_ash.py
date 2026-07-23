@@ -80,7 +80,7 @@ def robo_movement(movement):
     robot.set_motor(m1, m2, m3, m4)
 
 while True:
-    moving_direction = input("direction?").lower()
+    moving_direction = input("direction? ").lower()
     print("forward, backward, left, right, top_left, bottom_right, bottom_left, top_right, turn_left, turn_right")
     if moving_direction.lower() == "q":
         break
