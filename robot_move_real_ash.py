@@ -13,74 +13,74 @@ turn_speed = 30
 def robo_movement(movement):
     global m1, m2, m3, m4
     move = movement
-    if move == "forward":
+    if move == "w":
         # Forward: all motors forward
         m1 = motor_speed
         m2 = motor_speed
         m3 = motor_speed
         m4 = motor_speed
 
-    if move == "backward":
+    if move == "s":
         # Backward: all motors backward
         m1 = -motor_speed
         m2 = -motor_speed
         m3 = -motor_speed
         m4 = -motor_speed
 
-    if move == "left":
+    if move == "a":
         # Left strafe: top-left and back-right backward, top-right and back-left forward
         m1 = -motor_speed
         m2 = motor_speed
         m3 = motor_speed
         m4 = -motor_speed
 
-    if move == "right":
+    if move == "d":
         # Right strafe: top-left and back-right forward, top-right and back-left backward
         m1 = motor_speed
         m2 = -motor_speed
         m3 = -motor_speed
         m4 = motor_speed
 
-    if move == "top_left":
+    if move == "wa":
         m1 = 0
         m2 = motor_speed
         m3 = motor_speed
         m4 = 0
 
-    if move == "bottom_right":
+    if move == "sd":
         m1 = 0
         m2 = -motor_speed
         m3 = -motor_speed
         m4 = 0
 
-    if move == "bottom_left":
+    if move == "sa":
         m1 = -motor_speed
         m2 = 0
         m3 = 0
         m4 = -motor_speed
 
-    if move == "top_right":
+    if move == "wd":
         m1 = motor_speed
         m2 = 0
         m3 = 0
         m4 = motor_speed
 
     # Handle turning
-    if move == "turn_left":
+    if move == "ta":
         # Turn left: counterclockwise rotation
         m1 = -turn_speed
         m2 = -turn_speed
         m3 = turn_speed
         m4 = turn_speed
 
-    if move == "turn_right":
+    if move == "td":
         # Turn right: clockwise rotation
         m1 = turn_speed
         m2 = turn_speed
         m3 = -turn_speed
         m4 = -turn_speed
     #stop
-    if move == "stop":
+    if move == "s":
         m1 = 0
         m2 = 0
         m3 = 0
@@ -90,7 +90,7 @@ def robo_movement(movement):
 
 while True:
     moving_direction = input("direction? ").lower()
-    print("forward, backward, left, right, top_left, bottom_right, bottom_left, top_right, turn_left, turn_right")
+    print("forward: w, backward: s, left: a, right: d, top_left: wa, bottom_right: sd , bottom_left: sa, top_right: wd, turn_left: ta, turn_right: td, stop: s")
     if moving_direction.lower() == "q":
         break
     robo_movement(moving_direction)
