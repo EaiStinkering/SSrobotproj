@@ -1,6 +1,14 @@
-move = ""
-motor_speed = 10
-turn_speed = 10
+from sparkybotmini import SparkyBotMini
+robot = SparkyBotMini(port="/dev/ttyUSB0", baudrate=115200, debug=False)
+robot.connect()
+
+m1 = 0
+m2 = 0
+m3 = 0
+m4 = 0
+motor_speed = 50
+turn_speed = 30
+
 
 def robo_movement(movement):
     global m1, m2, m3, m4
@@ -62,8 +70,8 @@ def robo_movement(movement):
         # Turn left: counterclockwise rotation
         m1 = -turn_speed
         m2 = -turn_speed
-        m3 += turn_speed
-        m4 += turn_speed
+        m3 = turn_speed
+        m4 = turn_speed
 
     if move == "turn_right":
         # Turn right: clockwise rotation
