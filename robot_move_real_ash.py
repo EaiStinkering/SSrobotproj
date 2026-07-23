@@ -3,6 +3,7 @@ motor_speed = 10
 turn_speed = 10
 
 def robo_movement(movement):
+    global m1, m2, m3, m4
     move = movement
     if move == "forward":
         # Forward: all motors forward
