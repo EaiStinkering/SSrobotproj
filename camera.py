@@ -32,6 +32,16 @@ TARGET_LABEL = "corn"
 TARGET_FPS = 5
 FRAME_DELAY_MS = int(1000 / TARGET_FPS)
 
+# ===== RESOLUTION CONFIGURATION =====
+# Set desired resolution (width, height)
+# Lower resolution = faster processing
+# Examples: 
+#   320x240 (QVGA) - very low
+#   640x480 (VGA) - standard
+#   1280x720 (HD) - high
+FRAME_WIDTH = 320
+FRAME_HEIGHT = 240
+
 # 1. Initialize the webcam (0 is usually the default built-in camera)
 cap = cv2.VideoCapture(0)
 
@@ -39,6 +49,10 @@ cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Error: Could not open the webcam.")
     exit()
+
+# Set camera resolution
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
 def detect_target(frame, lower, upper):
     """
@@ -75,6 +89,7 @@ print("  'q' - Quit")
 print(f"Detecting: {TARGET_LABEL}")
 print(f"Color Range (BGR): R({RED_LOWER}-{RED_UPPER}), G({GREEN_LOWER}-{GREEN_UPPER}), B({BLUE_LOWER}-{BLUE_UPPER})")
 print(f"Framerate: {TARGET_FPS} FPS ({FRAME_DELAY_MS}ms delay)")
+print(f"Resolution: {FRAME_WIDTH}x{FRAME_HEIGHT}")
 print()
 
 while True:
