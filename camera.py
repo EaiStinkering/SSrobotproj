@@ -9,18 +9,16 @@ if not cap.isOpened():
     print("Error: Could not open the webcam.")
     exit()
 
-# Target RGB color range (changeable)
-# Format: (lower_bound, upper_bound) in BGR (OpenCV uses BGR, not RGB)
-# Example: Red target
-target_bgr_lower = np.array([0, 0, 100])      # Lower bound for red
-target_bgr_upper = np.array([100, 100, 255])  # Upper bound for red
+# Target BGR color range based on provided ranges
+# Red Range: 0-110, Green Range: 135-255, Blue Range: 0-255
+target_bgr_lower = np.array([0, 135, 0])      # Lower bound
+target_bgr_upper = np.array([110, 255, 255])  # Upper bound
 
 def detect_target(frame, lower, upper):
     """
     Detect pixels within the specified BGR color range.
-    Returns: mask (binary image), contours, center of largest contour
+    Returns: mask (binary image), bounding box, center
     """
-    # Convert frame to BGR (already is, but making it explicit)
     # Create a mask for pixels within the color range
     mask = cv2.inRange(frame, lower, upper)
     
@@ -32,24 +30,22 @@ def detect_target(frame, lower, upper):
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
+    bbox = None
     center = None
     if contours:
         # Get the largest contour
         largest_contour = max(contours, key=cv2.contourArea)
-        # Calculate the center of the contour
-        M = cv2.moments(largest_contour)
-        if M["m00"] != 0:
-            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        # Get bounding box for the largest contour
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        bbox = (x, y, w, h)
+        # Calculate the center of the bounding box
+        center = (x + w // 2, y + h // 2)
     
-    return mask, contours, center
+    return mask, bbox, center
 
 print("Target Detection Active!")
 print("Controls:")
 print("  'q' - Quit")
-print("  'r' - Change target to Red")
-print("  'g' - Change target to Green")
-print("  'b' - Change target to Blue")
-print("  'y' - Change target to Yellow")
 print()
 
 while True:
@@ -61,13 +57,17 @@ while True:
         break
 
     # Detect target
-    mask, contours, center = detect_target(frame, target_bgr_lower, target_bgr_upper)
+    mask, bbox, center = detect_target(frame, target_bgr_lower, target_bgr_upper)
     
-    # Draw contours and center on the frame
-    cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-    if center:
-        cv2.circle(frame, center, 5, (0, 255, 0), -1)
-        print(f"Target detected at: {center}")
+    # Draw bounding box and label on the frame
+    if bbox:
+        x, y, w, h = bbox
+        # Draw bounding box
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        # Draw label "corn"
+        cv2.putText(frame, "corn", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        if center:
+            print(f"Target detected at: {center}")
     
     # 3. Display the resulting frame
     cv2.imshow('Webcam Stream - Target Detection', frame)
@@ -77,26 +77,6 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == ord('q'):
         break
-    elif key == ord('r'):
-        # Red target (BGR)
-        target_bgr_lower = np.array([0, 0, 100])
-        target_bgr_upper = np.array([100, 100, 255])
-        print("Target changed to RED")
-    elif key == ord('g'):
-        # Green target (BGR)
-        target_bgr_lower = np.array([0, 100, 0])
-        target_bgr_upper = np.array([100, 255, 100])
-        print("Target changed to GREEN")
-    elif key == ord('b'):
-        # Blue target (BGR)
-        target_bgr_lower = np.array([100, 0, 0])
-        target_bgr_upper = np.array([255, 100, 100])
-        print("Target changed to BLUE")
-    elif key == ord('y'):
-        # Yellow target (BGR)
-        target_bgr_lower = np.array([0, 100, 100])
-        target_bgr_upper = np.array([100, 255, 255])
-        print("Target changed to YELLOW")
 
 # 5. Release the hardware resource and close all windows
 cap.release()
