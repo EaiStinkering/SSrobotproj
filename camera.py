@@ -1,6 +1,30 @@
 import cv2
 import numpy as np
 
+# ===== COLOR RANGE CONFIGURATION =====
+# Adjust these values to detect different colors
+# BGR format (Blue, Green, Red) - values range from 0-255
+# 
+# Examples:
+#   Green: lower=[35, 40, 40], upper=[90, 255, 255]
+#   Blue:  lower=[100, 0, 0], upper=[255, 100, 100]
+#   Red:   lower=[0, 0, 100], upper=[100, 100, 255]
+#
+# Red/Yellow Range (Corn):
+RED_LOWER = 0
+RED_UPPER = 110
+GREEN_LOWER = 135
+GREEN_UPPER = 255
+BLUE_LOWER = 0
+BLUE_UPPER = 255
+
+# Build color range arrays from variables
+target_bgr_lower = np.array([BLUE_LOWER, GREEN_LOWER, RED_LOWER])
+target_bgr_upper = np.array([BLUE_UPPER, GREEN_UPPER, RED_UPPER])
+
+# ===== TARGET LABEL =====
+TARGET_LABEL = "corn"
+
 # 1. Initialize the webcam (0 is usually the default built-in camera)
 cap = cv2.VideoCapture(0)
 
@@ -8,11 +32,6 @@ cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Error: Could not open the webcam.")
     exit()
-
-# Target BGR color range based on provided ranges
-# Red Range: 0-110, Green Range: 135-255, Blue Range: 0-255
-target_bgr_lower = np.array([0, 135, 0])      # Lower bound
-target_bgr_upper = np.array([110, 255, 255])  # Upper bound
 
 def detect_target(frame, lower, upper):
     """
@@ -46,6 +65,8 @@ def detect_target(frame, lower, upper):
 print("Target Detection Active!")
 print("Controls:")
 print("  'q' - Quit")
+print(f"Detecting: {TARGET_LABEL}")
+print(f"Color Range (BGR): R({RED_LOWER}-{RED_UPPER}), G({GREEN_LOWER}-{GREEN_UPPER}), B({BLUE_LOWER}-{BLUE_UPPER})")
 print()
 
 while True:
@@ -64,8 +85,8 @@ while True:
         x, y, w, h = bbox
         # Draw bounding box
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        # Draw label "corn"
-        cv2.putText(frame, "corn", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        # Draw label
+        cv2.putText(frame, TARGET_LABEL, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         if center:
             print(f"Target detected at: {center}")
     
