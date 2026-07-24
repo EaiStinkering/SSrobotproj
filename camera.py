@@ -12,11 +12,11 @@ import numpy as np
 #
 # Red/Yellow Range (Corn):
 RED_LOWER = 0
-RED_UPPER = 110
-GREEN_LOWER = 135
-GREEN_UPPER = 255
-BLUE_LOWER = 0
-BLUE_UPPER = 255
+RED_UPPER = 103.75
+GREEN_LOWER = 103.75
+GREEN_UPPER = 197.5
+BLUE_LOWER = 18.75
+BLUE_UPPER = 118.75
 
 # Build color range arrays from variables
 target_bgr_lower = np.array([BLUE_LOWER, GREEN_LOWER, RED_LOWER])
