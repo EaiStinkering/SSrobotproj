@@ -156,7 +156,7 @@ while True:
             move_towards_target(center, FRAME_WIDTH, FRAME_HEIGHT)
     else:
         # No target detected, stop robot
-        robo_movement("s")
+        robo_movement("no_corn")
     
     # 3. Display the resulting frame
     cv2.imshow('Webcam Stream - Target Detection', frame)
@@ -168,6 +168,6 @@ while True:
         break
 
 # 5. Release the hardware resource and close all windows
-robo_movement("s")  # Stop robot before exit
+robo_movement("x")  # Stop robot before exit
 cap.release()
 cv2.destroyAllWindows()
