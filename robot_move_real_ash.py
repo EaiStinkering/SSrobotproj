@@ -8,11 +8,13 @@ m3 = 0
 m4 = 0
 motor_speed = 50
 turn_speed = 30
-
+corn_found = False
 
 def robo_movement(movement):
-    global m1, m2, m3, m4
+    global m1, m2, m3, m4, corn_found
     move = movement
+    if move != "ta" or move!= "no_corn":
+        corn_found = True
     if move == "w":
         # Forward: all motors forward
         m1 = motor_speed
@@ -80,7 +82,7 @@ def robo_movement(movement):
         m3 = -turn_speed
         m4 = -turn_speed
     #stop
-    if move == "s":
+    if move == "x":
         m1 = 0
         m2 = 0
         m3 = 0
@@ -102,10 +104,19 @@ while True:
     robo_movement(moving_direction)
 
 
-corn_found = False
-while quit == False
+quit = False
+moving_direction = ""
+while True:
     
-    if corn_found == False and move != "left":
+    if moving_direction == "no_corn":
         robo_movement("ta")
+        print("look for corn")
+        corn_found = False
     
     
+    moving_direction = input("direction? ").lower()
+    print("forward: w, backward: s, left: a, right: d, top_left: wa, bottom_right: sd , bottom_left: sa, top_right: wd, turn_left: ta, turn_right: td, stop: x")
+    if moving_direction.lower() == "q":
+        quit == True
+        break
+    robo_movement(moving_direction)
