@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from robot_move_real_ash import robo_movement
 
 # ===== COLOR RANGE CONFIGURATION =====
 # Adjust these values to detect different colors
@@ -83,7 +84,46 @@ def detect_target(frame, lower, upper):
     
     return mask, bbox, center
 
-print("Target Detection Active!")
+def move_towards_target(center, frame_width, frame_height):
+    """
+    Determine movement direction based on target position in frame.
+    Center of frame is (frame_width/2, frame_height/2)
+    """
+    center_x = frame_width / 2
+    center_y = frame_height / 2
+    
+    target_x, target_y = center
+    
+    # Tolerance for center (pixels)
+    tolerance = 30
+    
+    # Horizontal movement
+    if target_x < center_x - tolerance:
+        # Target is on the left, strafe left
+        robo_movement("a")
+        print("Moving LEFT to track target")
+    elif target_x > center_x + tolerance:
+        # Target is on the right, strafe right
+        robo_movement("d")
+        print("Moving RIGHT to track target")
+    
+    # Vertical movement (forward/backward)
+    if target_y < center_y - tolerance:
+        # Target is in upper half, move forward
+        robo_movement("w")
+        print("Moving FORWARD to track target")
+    elif target_y > center_y + tolerance:
+        # Target is in lower half, move backward
+        robo_movement("s")
+        print("Moving BACKWARD to track target")
+    
+    # If target is centered, stop
+    if (abs(target_x - center_x) <= tolerance and 
+        abs(target_y - center_y) <= tolerance):
+        robo_movement("s")  # Stop movement
+        print("Target CENTERED - stopping")
+
+print("Target Detection Active with Robot Movement!")
 print("Controls:")
 print("  'q' - Quit")
 print(f"Detecting: {TARGET_LABEL}")
@@ -112,6 +152,11 @@ while True:
         cv2.putText(frame, TARGET_LABEL, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         if center:
             print(f"Target detected at: {center}")
+            # Call movement function to track target
+            move_towards_target(center, FRAME_WIDTH, FRAME_HEIGHT)
+    else:
+        # No target detected, stop robot
+        robo_movement("s")
     
     # 3. Display the resulting frame
     cv2.imshow('Webcam Stream - Target Detection', frame)
@@ -123,5 +168,6 @@ while True:
         break
 
 # 5. Release the hardware resource and close all windows
+robo_movement("s")  # Stop robot before exit
 cap.release()
 cv2.destroyAllWindows()
