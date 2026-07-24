@@ -92,15 +92,20 @@ def robo_movement(movement):
 
     robot.set_motor(m1, m2, m3, m4)
 
+quit = False
 while True:
     moving_direction = input("direction? ").lower()
     print("forward: w, backward: s, left: a, right: d, top_left: wa, bottom_right: sd , bottom_left: sa, top_right: wd, turn_left: ta, turn_right: td, stop: s")
     if moving_direction.lower() == "q":
+        quit == True
         break
     robo_movement(moving_direction)
 
 
-#corn_found = False
-#while corn_found == False:
-#    if move != "left":
-#        robo_movement("left")
+corn_found = False
+while quit == False
+    
+    if corn_found == False and move != "left":
+        robo_movement("ta")
+    
+    
