@@ -1,0 +1,288 @@
+import cv2
+from sparkybotmini import SparkyBotMini
+
+# ---- CHANGEABLE PROPERTIES HERE ---- #
+# Capture Resolution
+CAPTURE_WIDTH = 128
+CAPTURE_HEIGHT = 72
+
+# Display Size
+DISPLAY_WIDTH = 600
+DISPLAY_HEIGHT = 150
+
+# Motor Speeds (Manual mode)
+motor_speed = 20
+turn_speed = 20
+
+# AI Line Following Configuration
+AI_BASE_SPEED = 23          # Forward base speed
+AI_STEER_SENSITIVITY = 0.55 # Smooth tracking corrections
+MIN_LINE_PIXELS = 5         # Pixels needed to track normally
+
+# Tilted Camera Fix: Focus strictly on the bottom 6% of the frame
+ROI_HEIGHT_PERCENTAGE = 0.06 
+
+# --- ULTRA-ACUTE TURN TUNING VARIABLES ---
+SHARP_TURN_THRESHOLD_PCT = 0.15 
+AI_HARD_TURN_SPEED = 30     
+
+# LOOK-AHEAD CONFIGURATION (Scans up to the exact middle of the screen)
+LOOK_AHEAD_HEIGHT_PCT = 0.50 # Looks up to 50% (the middle) of the camera feed
+LOOK_AHEAD_MIN_PIXELS = 12   # Total pixels needed ahead to confirm line presence
+
+# GAP FILTER: How many frames the robot drifts forward through a blank gap
+MAX_GAP_FRAMES = 4 
+# ------------------------------------ #
+
+# Initialize and connect to the robot
+robot = SparkyBotMini(port="/dev/ttyUSB0", baudrate=115200, debug=False)
+robot.connect()
+
+# Global motor states
+m1, m2, m3, m4 = 0, 0, 0, 0
+ai_mode = False 
+
+# Memory Tracking
+last_known_side = "none"
+is_turn_memory_locked = False  # Strict flag preventing memory overrides
+gap_counter = 0  # Tracks frames where the primary box is blank
+
+def robo_movement(move):
+    global m1, m2, m3, m4
+    if ai_mode and move in ["w", "s", "a", "d", "wa", "wd", "sa", "sd", "z", "c"]:
+        return
+    if move == "w":        # Forward
+        m1, m2, m3, m4 = motor_speed, motor_speed, motor_speed, motor_speed
+    elif move == "s":      # Backward
+        m1, m2, m3, m4 = -motor_speed, -motor_speed, -motor_speed, -motor_speed
+    elif move == "a":      # Left strafe
+        m1, m2, m3, m4 = -motor_speed, motor_speed, motor_speed, -motor_speed
+    elif move == "d":      # Right strafe
+        m1, m2, m3, m4 = motor_speed, -motor_speed, -motor_speed, motor_speed
+    elif move == "wa":     # Diagonal top-left
+        m1, m2, m3, m4 = 0, motor_speed, motor_speed, 0
+    elif move == "sd":     # Diagonal bottom-right
+        m1, m2, m3, m4 = 0, -motor_speed, -motor_speed, 0
+    elif move == "sa":     # Diagonal bottom-left
+        m1, m2, m3, m4 = -motor_speed, 0, 0, -motor_speed
+    elif move == "wd":     # Diagonal top-right
+        m1, m2, m3, m4 = motor_speed, 0, 0, motor_speed
+    elif move == "z":      # Turn left
+        m1, m2, m3, m4 = -turn_speed, -turn_speed, turn_speed, turn_speed
+    elif move == "c":      # Turn right
+        m1, m2, m3, m4 = turn_speed, turn_speed, -turn_speed, -turn_speed
+    elif move == "x":      # Stop
+        m1, m2, m3, m4 = 0, 0, 0, 0
+    elif move == "b":      # Beep
+        robot.beep()
+        return
+    robot.set_motor(m1, m2, m3, m4)
+
+def track_line(strict_thresh, actual_w, actual_h):
+    """Processes active tracking slice and saves look-ahead memory based on peak black pixel counts."""
+    global last_known_side, gap_counter, is_turn_memory_locked
+    
+    # Calculate boundary rows and horizontal zone boundaries
+    roi_start_row = int(actual_h * (1.0 - ROI_HEIGHT_PERCENTAGE))
+    look_ahead_start = int(actual_h * (1.0 - LOOK_AHEAD_HEIGHT_PCT))
+    frame_center = actual_w // 2
+    sharp_turn_threshold = int(actual_w * SHARP_TURN_THRESHOLD_PCT)
+    
+    # Define exact thirds for the look-ahead window density check
+    one_third_w = actual_w // 3
+    two_thirds_w = one_third_w * 2
+    
+    # Isolate bottom primary tracking box
+    roi = strict_thresh[roi_start_row:actual_h, :]
+    black_pixels = cv2.findNonZero(255 - roi)
+    
+    # --- SCENARIO 1: THE LINE IS VISIBLE IN THE BOTTOM TRACKING BOX ---
+    if black_pixels is not None and len(black_pixels) >= MIN_LINE_PIXELS:
+        gap_counter = 0  # Reset our gap clock since we see a line
+        avg_x = int(black_pixels[:, 0, 0].mean())
+        error = avg_x - frame_center
+        
+        # UNLOCK CONDITION: If the line safely returns to the tracking center, clear memory locks
+        if is_turn_memory_locked and abs(error) < (sharp_turn_threshold // 2):
+            is_turn_memory_locked = False
+            last_known_side = "none"
+
+        # PREEMPTIVE PIXEL DENSITY CHECK: Scan zones if memory isn't currently locked
+        if not is_turn_memory_locked:
+            look_ahead_roi = strict_thresh[look_ahead_start:roi_start_row, :]
+            
+            # Crop into 3 isolated structural slices: Left, Center, Right
+            left_zone = look_ahead_roi[:, 0:one_third_w]
+            center_zone = look_ahead_roi[:, one_third_w:two_thirds_w]
+            right_zone = look_ahead_roi[:, two_thirds_w:actual_w]
+            
+            # Count the total number of black pixels in each independent zone
+            px_left = cv2.countNonZero(255 - left_zone)
+            px_center = cv2.countNonZero(255 - center_zone)
+            px_right = cv2.countNonZero(255 - right_zone)
+            total_look_ahead_px = px_left + px_center + px_right
+            
+            # Verify there is an active track piece ahead to calculate against
+            if total_look_ahead_px >= LOOK_AHEAD_MIN_PIXELS:
+                # Determine which zone holds the highest concentration of line pixels
+                if px_left > px_center and px_left > px_right:
+                    last_known_side = "left"
+                    is_turn_memory_locked = True
+                elif px_right > px_center and px_right > px_left:
+                    last_known_side = "right"
+                    is_turn_memory_locked = True
+                else:
+                    # Center wins or ties: We are safe on a straight track
+                    last_known_side = "none"
+
+        # Hard immediate drift pivot overrides (Fallback if bottom box escapes)
+        if error < -sharp_turn_threshold:
+            last_known_side = "left"
+            is_turn_memory_locked = True
+            robot.set_motor(-AI_HARD_TURN_SPEED, -AI_HARD_TURN_SPEED, AI_HARD_TURN_SPEED, AI_HARD_TURN_SPEED)
+            return avg_x, "HARD PIVOT LEFT", roi_start_row, sharp_turn_threshold
+        elif error > sharp_turn_threshold:
+            last_known_side = "right"
+            is_turn_memory_locked = True
+            robot.set_motor(AI_HARD_TURN_SPEED, AI_HARD_TURN_SPEED, -AI_HARD_TURN_SPEED, -AI_HARD_TURN_SPEED)
+            return avg_x, "HARD PIVOT RIGHT", roi_start_row, sharp_turn_threshold
+            
+        # Standard driving lane adjustments
+        steering_adjustment = int(error * AI_STEER_SENSITIVITY)
+        left_speed = AI_BASE_SPEED + steering_adjustment
+        right_speed = AI_BASE_SPEED - steering_adjustment
+        
+        left_speed = max(-100, min(100, left_speed))
+        right_speed = max(-100, min(100, right_speed))
+        
+        robot.set_motor(left_speed, left_speed, right_speed, right_speed)
+        return avg_x, "DRIVING", roi_start_row, sharp_turn_threshold
+
+    # --- SCENARIO 2: LOST! RUN CONTINUOUS PIVOT VIA THE LOCKED LOOK-AHEAD ZONE WINNER ---
+    else:
+        gap_counter += 1
+        
+        # GAP SUPPRESSION: Coast forward briefly to handle intentional line gaps
+        if gap_counter <= MAX_GAP_FRAMES:
+            robot.set_motor(AI_BASE_SPEED, AI_BASE_SPEED, AI_BASE_SPEED, AI_BASE_SPEED)
+            return None, f"COASTING GAP ({gap_counter}/{MAX_GAP_FRAMES})", roi_start_row, sharp_turn_threshold
+            
+        # Execute turn using the high-density winning direction.
+        status_msg = "BLIND SEARCH" if last_known_side == "none" else f"DENSITY LOCK ({last_known_side.upper()})"
+
+        if last_known_side == "left":
+            robot.set_motor(-AI_HARD_TURN_SPEED, -AI_HARD_TURN_SPEED, AI_HARD_TURN_SPEED, AI_HARD_TURN_SPEED)
+            return None, f"{status_msg} LEFT", roi_start_row, sharp_turn_threshold
+        elif last_known_side == "right":
+            robot.set_motor(AI_HARD_TURN_SPEED, AI_HARD_TURN_SPEED, -AI_HARD_TURN_SPEED, -AI_HARD_TURN_SPEED)
+            return None, f"{status_msg} RIGHT", roi_start_row, sharp_turn_threshold
+        else:
+            robot.set_motor(0, 0, 0, 0)
+            return None, "LOST / STOPPED", roi_start_row, sharp_turn_threshold
+
+def main():
+    global ai_mode, last_known_side, gap_counter
+    
+    # DYNAMIC CAMERA SEARCH: Try indices 0, 1, and 2 to guarantee the video stream initializes
+    cap = None
+    for camera_index in [0, 1, 2]:  
+        print(f"Attempting to mount camera on index {camera_index}...")
+        cap = cv2.VideoCapture(camera_index)
+        if cap.isOpened():
+            print(f"--> Camera Successfully Hooked on index {camera_index}!")
+            break
+        cap.release()
+    
+    if cap is None or not cap.isOpened():
+        print("CRITICAL HARDWARE ERROR: No responsive camera index (0, 1, 2) could be initialized.")
+        return
+        
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
+    
+    print("\n--- Control Instructions ---")
+    print("t: TOGGLE AI MODE (Line Following Switch)")
+    print("q: Quit")
+    print("----------------------------\n")
+    
+    key_buffer = ""
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to read frame - Stream Interrupted")
+            break
+            
+        actual_h, actual_w = frame.shape[:2]
+        
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blurred_frame = cv2.GaussianBlur(gray_frame, (3, 3), 0)
+        _, strict_thresh = cv2.threshold(blurred_frame, 65, 255, cv2.THRESH_BINARY)
+        
+        line_center = None
+        ai_status = "MANUAL"
+        
+        roi_start_row = int(actual_h * (1.0 - ROI_HEIGHT_PERCENTAGE))
+        look_ahead_start_row = int(actual_h * (1.0 - LOOK_AHEAD_HEIGHT_PCT))
+        frame_center = actual_w // 2
+        sharp_turn_threshold = int(actual_w * SHARP_TURN_THRESHOLD_PCT)
+        
+        if ai_mode:
+            line_center, ai_status, roi_start_row, sharp_turn_threshold = track_line(strict_thresh, actual_w, actual_h)
+            
+        bw_frame = cv2.cvtColor(strict_thresh, cv2.COLOR_GRAY2BGR)
+        
+        # Display Box Graphics
+        cv2.rectangle(bw_frame, (0, look_ahead_start_row), (actual_w, roi_start_row), (0, 255, 255), 1)
+        cv2.rectangle(bw_frame, (0, roi_start_row), (actual_w, actual_h), (255, 255, 0), 1)
+        cv2.line(bw_frame, (frame_center - sharp_turn_threshold, roi_start_row), (frame_center - sharp_turn_threshold, actual_h), (0, 165, 255), 1)
+        cv2.line(bw_frame, (frame_center + sharp_turn_threshold, roi_start_row), (frame_center + sharp_turn_threshold, actual_h), (0, 165, 255), 1)
+        
+        # Draw division lines for Left/Center/Right thirds inside the look-ahead box
+        one_third_w = actual_w // 3
+        two_thirds_w = one_third_w * 2
+        cv2.line(bw_frame, (one_third_w, look_ahead_start_row), (one_third_w, roi_start_row), (255, 0, 128), 1)
+        cv2.line(bw_frame, (two_thirds_w, look_ahead_start_row), (two_thirds_w, roi_start_row), (255, 0, 128), 1)
+        
+        if ai_mode and line_center is not None:
+            cv2.line(bw_frame, (line_center, roi_start_row), (line_center, actual_h), (0, 0, 255), 2)
+            
+        resized_frame = cv2.resize(bw_frame, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+        cv2.putText(resized_frame, f"STATE: {ai_status}", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
+        cv2.putText(resized_frame, f"MEMORY: {last_known_side}", (420, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
+        
+        cv2.imshow("Camera Feed", resized_frame)
+        
+        key = cv2.waitKey(10) & 0xFF
+        if key != 255:
+            char = chr(key).lower()
+            if char == 'q':
+                break
+            elif char == 't':
+                ai_mode = not ai_mode
+                last_known_side = "none"
+                gap_counter = 0
+                is_turn_memory_locked = False
+                print(f"\n>> Switched Mode! AI Autonomous tracking is now: {ai_mode}")
+                robot.set_motor(0, 0, 0, 0)
+                key_buffer = ""
+                continue
+                
+            key_buffer += char
+            if key_buffer in ["w", "s", "a", "d", "x", "b", "wa", "wd", "sa", "sd", "z", "c"]:
+                robo_movement(key_buffer)
+                key_buffer = ""
+            elif len(key_buffer) >= 2:
+                robo_movement(char)
+                key_buffer = ""
+        else:
+            if len(key_buffer) > 0:
+                key_buffer = ""
+                
+    print("Shutting down safely...")
+    robot.set_motor(0, 0, 0, 0)
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
