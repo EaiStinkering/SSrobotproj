@@ -248,6 +248,10 @@ def main():
         blurred_frame = cv2.GaussianBlur(gray_frame, (3, 3), 0)
         _, strict_thresh = cv2.threshold(blurred_frame, 65, 255, cv2.THRESH_BINARY)
 
+        # Create a visualization window for the threshold used by the line follower.
+        # This is a separate screen/window so YOLO/camera view remains unchanged.
+        threshold_vis = cv2.cvtColor(strict_thresh, cv2.COLOR_GRAY2BGR)
+
         line_center = None
         ai_status = "MANUAL"
         roi_start_row = int(actual_h * (1.0 - ROI_HEIGHT_PERCENTAGE))
@@ -273,12 +277,28 @@ def main():
         if ai_mode and line_center is not None:
             cv2.line(annotated_frame, (line_center, roi_start_row), (line_center, actual_h), (0, 0, 255), 2)
 
+        # Also annotate the threshold visualization with the same overlays the line follower uses
+        cv2.rectangle(threshold_vis, (0, look_ahead_start_row), (actual_w, roi_start_row), (0, 255, 255), 1)
+        cv2.rectangle(threshold_vis, (0, roi_start_row), (actual_w, actual_h), (255, 255, 0), 1)
+        cv2.line(threshold_vis, (frame_center - sharp_turn_threshold, roi_start_row), (frame_center - sharp_turn_threshold, actual_h), (0, 165, 255), 1)
+        cv2.line(threshold_vis, (frame_center + sharp_turn_threshold, roi_start_row), (frame_center + sharp_turn_threshold, actual_h), (0, 165, 255), 1)
+        cv2.line(threshold_vis, (one_third_w, look_ahead_start_row), (one_third_w, roi_start_row), (255, 0, 128), 1)
+        cv2.line(threshold_vis, (two_thirds_w, look_ahead_start_row), (two_thirds_w, roi_start_row), (255, 0, 128), 1)
+        if line_center is not None:
+            cv2.line(threshold_vis, (line_center, roi_start_row), (line_center, actual_h), (0, 0, 255), 2)
+
         # 4. Final Output Scaling & Text Display
         resized_frame = cv2.resize(annotated_frame, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
         cv2.putText(resized_frame, f"STATE: {ai_status}", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
         cv2.putText(resized_frame, f"MEMORY: {last_known_side}", (420, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
 
+        # Resize threshold visualization to the same display height so you can position windows side-by-side.
+        resized_thresh = cv2.resize(threshold_vis, (DISPLAY_WIDTH, DISPLAY_HEIGHT))
+        cv2.putText(resized_thresh, "THRESHOLD (for line follower)", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1, cv2.LINE_AA)
+
+        # Show both windows: annotated camera (with YOLO/corn detection) and the threshold feed used by the AI
         cv2.imshow("Robot Integration HUD", resized_frame)
+        cv2.imshow("Threshold - Line Following", resized_thresh)
 
         # 5. Non-Blocking Key Handler
         key = cv2.waitKey(1) & 0xFF
@@ -313,4 +333,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
